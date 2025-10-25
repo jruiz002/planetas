@@ -1,0 +1,9 @@
+[package]
+name = "planetas"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+raylib = "5.0"
+nalgebra = "0.32"
+rand = "0.8"

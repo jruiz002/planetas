@@ -8,13 +8,14 @@ use raylib::prelude::*;
 use vector::Vector3;
 use camera::Camera;
 use sphere::{Mesh, Vertex};
-use shaders::{PlanetShader, RockyPlanetShader, GasGiantShader, CrystalPlanetShader, ShaderUniforms, ShaderColor};
+use shaders::{PlanetShader, RockyPlanetShader, GasGiantShader, CrystalPlanetShader, LavaPlanetShader, ShaderUniforms, ShaderColor};
 use std::f32::consts::PI;
 
 enum PlanetType {
     Rocky,
     GasGiant,
     Crystal,
+    Lava,
 }
 
 struct Planet {
@@ -32,6 +33,7 @@ impl Planet {
             PlanetType::Rocky => (Box::new(RockyPlanetShader), 0.5),
             PlanetType::GasGiant => (Box::new(GasGiantShader), 1.2),
             PlanetType::Crystal => (Box::new(CrystalPlanetShader), 0.8),
+            PlanetType::Lava => (Box::new(LavaPlanetShader), 1.5),
         };
         
         Planet {
@@ -145,6 +147,7 @@ fn main() {
         Planet::new(PlanetType::Rocky),
         Planet::new(PlanetType::GasGiant),
         Planet::new(PlanetType::Crystal),
+        Planet::new(PlanetType::Lava),
     ];
     
     let mut current_planet = 0;
@@ -175,6 +178,8 @@ fn main() {
             current_planet = 1;
         } else if rl.is_key_pressed(KeyboardKey::KEY_THREE) {
             current_planet = 2;
+        } else if rl.is_key_pressed(KeyboardKey::KEY_FOUR) {
+            current_planet = 3;
         }
         
         // Actualizar planeta actual
@@ -206,11 +211,12 @@ fn main() {
         d.draw_text("1 - Planeta Rocoso", 10, 60, 14, raylib::prelude::Color::WHITE);
         d.draw_text("2 - Gigante Gaseoso", 10, 80, 14, raylib::prelude::Color::WHITE);
         d.draw_text("3 - Planeta de Cristal", 10, 100, 14, raylib::prelude::Color::WHITE);
-        d.draw_text("Click izquierdo + arrastrar: Rotar cámara", 10, 120, 14, raylib::prelude::Color::WHITE);
-        d.draw_text("Rueda del ratón: Zoom", 10, 140, 14, raylib::prelude::Color::WHITE);
-        d.draw_text("Click derecho + arrastrar: Mover cámara", 10, 160, 14, raylib::prelude::Color::WHITE);
+        d.draw_text("4 - Planeta de Lava", 10, 120, 14, raylib::prelude::Color::WHITE);
+        d.draw_text("Click izquierdo + arrastrar: Rotar cámara", 10, 140, 14, raylib::prelude::Color::WHITE);
+        d.draw_text("Rueda del ratón: Zoom", 10, 160, 14, raylib::prelude::Color::WHITE);
+        d.draw_text("Click derecho + arrastrar: Mover cámara", 10, 180, 14, raylib::prelude::Color::WHITE);
         
-        let planet_names = ["Planeta Rocoso", "Gigante Gaseoso", "Planeta de Cristal"];
+        let planet_names = ["Planeta Rocoso", "Gigante Gaseoso", "Planeta de Cristal", "Planeta de Lava"];
         d.draw_text(
             &format!("Planeta actual: {}", planet_names[current_planet]),
             10,

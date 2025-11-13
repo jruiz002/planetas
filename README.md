@@ -18,19 +18,27 @@ El laboratorio cumple con todos los requisitos establecidos:
 - **4 capas de efectos**: Montañas (ridge noise), cráteres (Voronoi), rugosidad (fbm), minerales
 - **Incluye luna orbital** procedural
 
+![Planeta Rocoso](images/planeta_1.png)
+
 ### 2. Gigante Gaseoso (Tecla 2)  
 - **Bandas atmosféricas** dinámicas que cambian con el tiempo
 - **4 capas de efectos**: Bandas base, turbulencia, vórtices, brillos atmosféricos
 - **Incluye sistema de anillos** procedurales
+
+![Gigante Gaseoso](images/planeta_2.png)
 
 ### 3. Planeta de Cristal (Tecla 3)
 - **Efectos cristalinos** con refracción y brillos especulares
 - **4 capas de efectos**: Cristales base, refracción, especular, patrones de energía
 - **Incluye sistema de anillos** procedurales
 
+![Planeta de Cristal](images/planeta_3.png)
+
 ### 4. Planeta de Lava (Tecla 4)
 - **Mundo volcánico** con lava fundida y actividad geotérmica  
 - **4 capas de efectos**: Roca volcánica, lava fundida, emisión de calor, resplandor
+
+![Planeta de Lava](images/planeta_4.png)
 
 ## 🛠️ Librerías Utilizadas
 

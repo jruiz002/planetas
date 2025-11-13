@@ -1,204 +1,131 @@
-# Laboratorio de Planetas con Shaders
+# Laboratorio de Planetas - Shaders Procedurales
 
-Un proyecto de renderizado de planetas procedurales utilizando únicamente shaders en Rust con Raylib. Este laboratorio demuestra la creación de cuerpos celestes complejos sin texturas externas, usando solo matemáticas y algoritmos procedurales.
+Este proyecto implementa un **software renderer** que visualiza diferentes tipos de cuerpos celestes utilizando únicamente **shaders procedurales**. Todos los efectos visuales son generados mediante cálculos matemáticos en vertex y fragment shaders, sin uso de texturas o materiales externos.
 
-## 🌟 Características Principales
+## � Descripción del Proyecto
 
-- **4 Planetas Únicos**: Cada uno con shaders procedurales complejos
-- **Anillos Procedurales**: Sistema de anillos generados completamente con Vertex Shaders
-- **Luna Orbital**: Luna procedural que orbita alrededor de los planetas
-- **Efectos Visuales Avanzados**: Múltiples capas de color, gradientes, iluminación simulada
-- **Controles Interactivos**: Navegación 3D completa y cambio de planetas
-- **Rotación y Traslación**: Movimientos planetarios realistas
+El laboratorio cumple con todos los requisitos establecidos:
+- ✅ **Tres tipos de planetas**: Rocoso, Gaseoso, Cristal, y Lava (4 implementados)
+- ✅ **Solo esferas base**: Usa el archivo `sphere.obj` proporcionado
+- ✅ **Sin texturas**: Todo es procedural con shaders
+- ✅ **Software renderer**: Pipeline de renderizado personalizado
+- ✅ **Características extras**: Anillos y luna procedurales
 
 ## 🪐 Planetas Implementados
 
 ### 1. Planeta Rocoso (Tecla 1)
-**Características técnicas:**
-- **Vertex Shader**: Deformación de superficie con múltiples capas de noise (simple_noise, fbm, voronoi_noise)
-- **Fragment Shader**: 6+ capas de efectos visuales
-  - Variaciones de altitud con colores de roca/arena
-  - Simulación de temperatura basada en posición
-  - Iluminación avanzada (difusa, especular, oclusión ambiental, rim lighting)
-  - Efectos atmosféricos sutiles
+- **Superficie rugosa** con montañas y cráteres
+- **4 capas de efectos**: Montañas (ridge noise), cráteres (Voronoi), rugosidad (fbm), minerales
+- **Incluye luna orbital** procedural
 
-**Parámetros del Shader:**
-- `altitude_variation`: Controla la variación de color por altura
-- `temperature_simulation`: Simula zonas calientes/frías
-- `surface_roughness`: Rugosidad de la superficie rocosa
-- `atmospheric_haze`: Efecto de atmósfera tenue
-
-![Planeta Rocoso](images/planeta_1.png)
-
-### 2. Gigante Gaseoso (Tecla 2)
-**Características técnicas:**
-- **Vertex Shader**: Ondas atmosféricas y turbulencia dinámica
-- **Fragment Shader**: 8+ capas de efectos atmosféricos
-  - Múltiples capas atmosféricas con colores distintos
-  - Bandas complejas con turbulencia
-  - Efectos de tormenta (Gran Mancha Roja simulada)
-  - Rayos atmosféricos animados
-  - Dispersión de luz y rim lighting avanzado
-
-**Parámetros del Shader:**
-- `atmospheric_layers`: 4 capas atmosféricas distintas
-- `storm_intensity`: Intensidad de las tormentas
-- `band_complexity`: Complejidad de las bandas atmosféricas
-- `lightning_frequency`: Frecuencia de rayos atmosféricos
-- `gas_density`: Densidad del gas con transparencia variable
-
-![Gigante Gaseoso](images/planeta_2.png)
+### 2. Gigante Gaseoso (Tecla 2)  
+- **Bandas atmosféricas** dinámicas que cambian con el tiempo
+- **4 capas de efectos**: Bandas base, turbulencia, vórtices, brillos atmosféricos
+- **Incluye sistema de anillos** procedurales
 
 ### 3. Planeta de Cristal (Tecla 3)
-**Características técnicas:**
-- **Vertex Shader**: Formaciones cristalinas multicapa con pulsaciones animadas
-- **Fragment Shader**: 7+ capas de efectos cristalinos
-  - Patrones de color complejos con transiciones suaves
-  - Efectos de energía interna
-  - Múltiples reflexiones especulares
-  - Refracción simulada
-  - Luz interna con cambios de color dinámicos
-
-**Parámetros del Shader:**
-- `crystal_formations`: Múltiples capas de cristales
-- `energy_pulse`: Pulsaciones de energía animadas
-- `internal_light`: Luz interna con variaciones de color
-- `refraction_index`: Simulación de refracción
-- `transparency_variation`: Variaciones de transparencia
-
-![Planeta de Cristal](images/planeta_3.png)
+- **Efectos cristalinos** con refracción y brillos especulares
+- **4 capas de efectos**: Cristales base, refracción, especular, patrones de energía
+- **Incluye sistema de anillos** procedurales
 
 ### 4. Planeta de Lava (Tecla 4)
-**Características técnicas:**
-- **Vertex Shader**: Deformación volcánica con flujos de lava y actividad pulsante
-- **Fragment Shader**: 6+ capas de efectos volcánicos
-  - Transiciones de color basadas en temperatura
-  - Patrones de flujo de lava animados
-  - Grietas volcánicas brillantes
-  - Emisión de calor simulada
-  - Resplandor volcánico dinámico
+- **Mundo volcánico** con lava fundida y actividad geotérmica  
+- **4 capas de efectos**: Roca volcánica, lava fundida, emisión de calor, resplandor
 
-**Parámetros del Shader:**
-- `volcanic_activity`: Intensidad de la actividad volcánica
-- `lava_flow_speed`: Velocidad de los flujos de lava
-- `heat_emission`: Emisión de calor con colores cálidos
-- `volcanic_glow`: Resplandor volcánico ambiental
-- `magma_chambers`: Cámaras de magma internas
+## 🛠️ Librerías Utilizadas
 
-![Planeta de Lava](images/planeta_4.png)
+### **Raylib** - Biblioteca gráfica principal
+- **Por qué**: Proporciona una API simple para crear ventanas, manejar entrada y renderizar primitivas básicas
+- **Uso**: Creación de ventana, manejo de eventos de teclado/mouse, funciones de dibujo (triangulos, líneas, píxeles)
+- **Ventaja**: Permite enfocarse en los shaders sin lidiar con OpenGL directamente
 
-## 🌙 Elementos Procedurales Adicionales
+### **Rust Standard Library**
+- **std::f32::consts::PI**: Constantes matemáticas para cálculos trigonométricos
+- **std::fs::File, std::io**: Para cargar el archivo sphere.obj
 
-### Sistema de Anillos Procedurales (20 puntos)
-**Implementación con Vertex Shader:**
-- **Generación**: 8 anillos concéntricos con espaciado variable
-- **Efectos Visuales**:
-  - Variaciones de densidad usando noise procedural
-  - Gaps naturales en los anillos
-  - Rotación diferencial (cada anillo rota a velocidad distinta)
-  - Partículas brillantes ocasionales
-  - Bandas de color con patrones complejos
-- **Parámetros**:
-  - `ring_count`: Número de anillos (8)
-  - `ring_spacing`: Espaciado entre anillos (0.3)
-  - `rotation_speed`: Velocidad de rotación variable
-  - `density_variation`: Variaciones de densidad
-  - `sparkle_frequency`: Frecuencia de partículas brillantes
+### Librerías **NO** utilizadas intencionalmente:
+- **No nalgebra/glam**: Implementé mi propio sistema de vectores y matrices para entender la matemática 3D
+- **No image/texture loading**: Cumple con la restricción de no usar texturas externas
+- **No OpenGL directo**: Raylib abstrae la complejidad del renderizado de hardware
 
-### Luna Procedural (20 puntos)
-**Implementación con Vertex Shader:**
-- **Órbita**: Movimiento orbital realista alrededor del planeta
-- **Características**:
-  - Escala reducida (30% del planeta)
-  - Rotación propia sincronizada
-  - Cráteres procedurales con deformación de superficie
-  - Variaciones de superficie lunar realistas
-- **Efectos Visuales**:
-  - Múltiples patrones de cráteres
-  - Detalles de superficie con fbm
-  - Iluminación lunar con rim lighting
-  - Variaciones de color gris lunar
-- **Parámetros**:
-  - `orbit_radius`: Radio orbital (3.0)
-  - `orbit_speed`: Velocidad orbital (0.8)
-  - `moon_scale`: Escala de la luna (0.3)
-  - `crater_density`: Densidad de cráteres
-  - `surface_roughness`: Rugosidad de la superficie
+## 🏗️ Arquitectura del Proyecto
 
-## 🎮 Controles Interactivos
-
-- **1-4**: Cambiar entre planetas
-- **Click izquierdo + arrastrar**: Rotar cámara
-- **Rueda del ratón**: Zoom in/out
-- **Click derecho + arrastrar**: Mover cámara
-
-## 🛠️ Tecnologías Utilizadas
-
-- **Rust**: Lenguaje de programación principal
-- **Raylib**: Biblioteca de gráficos y ventanas
-- **nalgebra**: Matemáticas vectoriales y matriciales
-- **rand**: Generación de números aleatorios para efectos procedurales
-
-## 📁 Estructura del Proyecto
-
+### **Estructura Modular**
 ```
 src/
-├── main.rs           # Bucle principal y lógica de renderizado
-├── vector.rs         # Implementación de Vector3 personalizado
-├── matrix.rs         # Operaciones matriciales para transformaciones
-├── camera.rs         # Sistema de cámara 3D interactiva
-├── sphere.rs         # Generación de malla esférica y renderizado
-└── shaders.rs        # Todos los shaders planetarios y efectos
+├── main.rs           # Loop principal y coordinación
+├── vector.rs         # Matemática vectorial personalizada  
+├── matrix.rs         # Transformaciones 3D (view, projection, viewport)
+├── camera.rs         # Sistema de cámara orbital
+├── sphere.rs         # Estructura de mesh y vértices
+├── shaders.rs        # Todos los shaders planetarios
+└── obj_loader.rs     # Cargador del archivo sphere.obj
 ```
 
-## 🚀 Instalación y Ejecución
+### **Pipeline de Renderizado (Software)**
+1. **Carga de Geometría**: `obj_loader.rs` parsea sphere.obj
+2. **Transformaciones**: `matrix.rs` aplica model-view-projection
+3. **Vertex Shader**: `shaders.rs` deforma la geometría
+4. **Proyección**: Convierte 3D a coordenadas de pantalla
+5. **Fragment Shader**: `shaders.rs` calcula el color final
+6. **Rasterización**: Raylib dibuja los triángulos resultantes
 
-### Prerrequisitos
-- Rust (versión 1.70 o superior)
-- Cargo (incluido con Rust)
+### **Sistema de Shaders**
+```rust
+pub trait PlanetShader {
+    fn vertex_shader(&self, position: Vector3, normal: Vector3, uv: (f32, f32), uniforms: &ShaderUniforms) -> (Vector3, Vector3);
+    fn fragment_shader(&self, position: Vector3, normal: Vector3, uv: (f32, f32), uniforms: &ShaderUniforms) -> ShaderColor;
+}
+```
 
-### Pasos de instalación
+- **Vertex Shader**: Modifica la posición de los vértices (deformación del terreno)
+- **Fragment Shader**: Calcula el color final usando múltiples capas de ruido
+- **Uniforms**: Parámetros globales (tiempo, posición de luz, cámara)
+
+### **Algoritmos de Ruido Procedural**
+- **Simple Noise**: Ruido básico pseudo-aleatorio
+- **FBM (Fractal Brownian Motion)**: Múltiples octavas de ruido para patrones complejos
+- **Voronoi Noise**: Patrones celulares para cráteres
+- **Ridge Noise**: Ruido con crestas para montañas
+
+## 🎮 Controles
+
+- **1-4**: Cambiar entre planetas
+- **WASD**: Rotar cámara
+- **Flechas**: Zoom y paneo horizontal  
+- **Q/E**: Paneo horizontal
+- **R/F**: Paneo vertical
+
+## 🚀 Compilación y Ejecución
+
 ```bash
-# Clonar el repositorio
-git clone https://github.com/jruiz002/planetas.git
-cd planetas
-
-# Compilar el proyecto
+# Compilar
 cargo build --release
 
-# Ejecutar la aplicación
+# Ejecutar  
 cargo run --release
 ```
 
-## 🔧 Arquitectura Técnica
+## ⭐ Características Técnicas Destacadas
 
-### Sistema de Shaders
-- **Trait PlanetShader**: Interfaz común para todos los shaders planetarios
-- **Vertex Shaders**: Deformación de geometría procedural
-- **Fragment Shaders**: Cálculo de color por píxel con múltiples capas
-- **Uniforms Compartidos**: `time`, `light_direction`, `camera_position`
+### **Múltiples Capas por Shader**
+Cada planeta implementa **4+ capas** de efectos que se combinan:
+- Colores base del material
+- Efectos de ruido procedural
+- Iluminación avanzada (difusa, especular, rim lighting)
+- Efectos temporales animados
 
-### Pipeline de Renderizado
-1. **Generación de Malla**: Esfera base con 32x32 subdivisiones
-2. **Transformación de Vértices**: Aplicación de vertex shaders
-3. **Rasterización**: Conversión a píxeles de pantalla
-4. **Sombreado de Fragmentos**: Cálculo de color final por píxel
-5. **Composición**: Renderizado final con efectos adicionales
+### **Elementos Procedurales Adicionales**
+- **Anillos**: 8 anillos concéntricos con rotación diferencial
+- **Luna**: Órbita realista con cráteres procedurales  
+- **Rotación planetaria**: Cada planeta rota a velocidad diferente
 
-### Efectos Procedurales
-- **Simple Noise**: Ruido básico para variaciones
-- **Fractional Brownian Motion (FBM)**: Ruido complejo multicapa
-- **Voronoi Noise**: Patrones celulares
-- **Ridge Noise**: Ruido con crestas para efectos montañosos
-
-## 📊 Métricas de Rendimiento
-
-- **FPS Target**: 60 FPS constantes
-- **Resolución**: 1024x768 píxeles
-- **Vértices por Esfera**: 2,048 vértices (32x32)
-- **Shaders Activos**: 1 planeta + anillos + luna simultáneamente
-- **Complejidad de Shader**: 6-8 capas de efectos por planeta
+### **Matemática 3D Personalizada**
+- Sistema completo de vectores y matrices implementado desde cero
+- Transformaciones model-view-projection manuales
+- Cámara orbital con controles intuitivos
 
 ---
 
-**Desarrollado para el curso de Gráficas por Computadora - Universidad del Valle de Guatemala**
+**Desarrollado para Gráficas por Computadora - Universidad del Valle de Guatemala**  
+**Por: José Ruiz**

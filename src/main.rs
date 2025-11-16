@@ -1,17 +1,21 @@
 mod vector;
 mod matrix;
 mod camera;
-mod sphere;
 mod shaders;
+mod sphere;
 mod obj_loader;
+mod framebuffer;
+mod fragment;
 
 use raylib::prelude::*;
 use vector::Vector3;
 use camera::Camera;
 use sphere::{Mesh, Vertex};
 use obj_loader::load_obj;
-use shaders::{PlanetShader, RockyPlanetShader, GasGiantShader, CrystalPlanetShader, LavaPlanetShader, RingShader, MoonShader, ShaderUniforms, ShaderColor};
+use shaders::{PlanetShader, RockyPlanetShader, GasGiantShader, CrystalPlanetShader, LavaPlanetShader, RingShader, MoonShader, ShaderUniforms};
 use std::f32::consts::PI;
+use framebuffer::Framebuffer;
+use fragment::{TransformedVertex, triangle};
 
 enum PlanetType {
     Rocky,
@@ -61,105 +65,124 @@ impl Planet {
     }
 }
 
+/// Función de renderizado usando framebuffer personalizado (implementación académica)
+/// Esta función demuestra el pipeline completo de renderizado 3D:
+/// 1. Vertex Shader - Transformación de vértices
+/// 2. Primitive Assembly - Ensamblaje de triángulos
+/// 3. Rasterization - Conversión a fragmentos usando coordenadas baricéntricas
+/// 4. Fragment Shader - Procesamiento de color por pixel
+/// 5. Framebuffer - Escritura final con depth testing
 fn render_planet_software(
-    planet: &Planet,
+    framebuffer: &mut Framebuffer,
+    planet: &mut Planet,
     camera: &Camera,
-    uniforms: &ShaderUniforms,
-    rl: &mut RaylibDrawHandle,
+    time: f32,
     width: i32,
     height: i32,
 ) {
-    let view_matrix = camera.get_view_matrix();
-    let proj_matrix = matrix::create_projection_matrix(
-        45.0_f32.to_radians(),
-        width as f32 / height as f32,
-        0.1,
-        100.0,
-    );
+    use matrix;
+    
+    // PASO 1: Construir matrices de transformación (multiplicación de matrices)
+    let view_matrix = matrix::create_view_matrix(camera.eye, camera.target, camera.up);
+    let proj_matrix = matrix::create_projection_matrix(45.0, width as f32 / height as f32, 0.1, 100.0);
     let viewport_matrix = matrix::create_viewport_matrix(0.0, 0.0, width as f32, height as f32);
     
-    // Matriz de rotación del planeta
-    let rotation_matrix = matrix::create_rotation_y(planet.rotation);
+    // Configurar uniformes del shader
+    let uniforms = ShaderUniforms {
+        time,
+        camera_position: camera.eye,
+        light_direction: Vector3::new(1.0, 1.0, 1.0).normalize(),
+    };
     
-    // Renderizar triángulos del planeta principal
+    // PASO 2: Primitive Assembly - Procesar cada triángulo
     for i in (0..planet.mesh.indices.len()).step_by(3) {
-        let i1 = planet.mesh.indices[i] as usize;
-        let i2 = planet.mesh.indices[i + 1] as usize;
-        let i3 = planet.mesh.indices[i + 2] as usize;
+        let idx1 = planet.mesh.indices[i] as usize;
+        let idx2 = planet.mesh.indices[i + 1] as usize;
+        let idx3 = planet.mesh.indices[i + 2] as usize;
         
-        if i1 >= planet.mesh.vertices.len() || i2 >= planet.mesh.vertices.len() || i3 >= planet.mesh.vertices.len() {
-            continue;
-        }
+        let v1 = &planet.mesh.vertices[idx1];
+        let v2 = &planet.mesh.vertices[idx2];
+        let v3 = &planet.mesh.vertices[idx3];
         
-        let v1 = &planet.mesh.vertices[i1];
-        let v2 = &planet.mesh.vertices[i2];
-        let v3 = &planet.mesh.vertices[i3];
+        // PASO 3: Vertex Shader - Aplicar transformaciones a cada vértice
+        let (pos1, norm1) = planet.shader.vertex_shader(v1.position, v1.normal, v1.uv, &uniforms);
+        let (pos2, norm2) = planet.shader.vertex_shader(v2.position, v2.normal, v2.uv, &uniforms);
+        let (pos3, norm3) = planet.shader.vertex_shader(v3.position, v3.normal, v3.uv, &uniforms);
         
-        // Aplicar transformaciones de vértices
-        let (pos1, norm1) = planet.shader.vertex_shader(
-            rotation_matrix.transform_vector(&v1.position),
-            rotation_matrix.transform_vector(&v1.normal),
-            v1.uv,
-            uniforms,
-        );
-        let (pos2, norm2) = planet.shader.vertex_shader(
-            rotation_matrix.transform_vector(&v2.position),
-            rotation_matrix.transform_vector(&v2.normal),
-            v2.uv,
-            uniforms,
-        );
-        let (pos3, norm3) = planet.shader.vertex_shader(
-            rotation_matrix.transform_vector(&v3.position),
-            rotation_matrix.transform_vector(&v3.normal),
-            v3.uv,
-            uniforms,
-        );
+        // Aplicar rotación del planeta (modelo matrix)
+        let rot_matrix = matrix::create_rotation_y(planet.rotation);
+        let world_pos1 = rot_matrix.transform_vector(&pos1);
+        let world_pos2 = rot_matrix.transform_vector(&pos2);
+        let world_pos3 = rot_matrix.transform_vector(&pos3);
+        let world_norm1 = rot_matrix.transform_vector(&norm1).normalize();
+        let world_norm2 = rot_matrix.transform_vector(&norm2).normalize();
+        let world_norm3 = rot_matrix.transform_vector(&norm3).normalize();
         
-        // Transformar a espacio de pantalla
-        let screen1 = viewport_matrix.transform_vector(&proj_matrix.transform_vector(&view_matrix.transform_vector(&pos1)));
-        let screen2 = viewport_matrix.transform_vector(&proj_matrix.transform_vector(&view_matrix.transform_vector(&pos2)));
-        let screen3 = viewport_matrix.transform_vector(&proj_matrix.transform_vector(&view_matrix.transform_vector(&pos3)));
+        // Multiplicación de matrices: Model * View * Projection
+        let screen1 = viewport_matrix.transform_vector(&proj_matrix.transform_vector(&view_matrix.transform_vector(&world_pos1)));
+        let screen2 = viewport_matrix.transform_vector(&proj_matrix.transform_vector(&view_matrix.transform_vector(&world_pos2)));
+        let screen3 = viewport_matrix.transform_vector(&proj_matrix.transform_vector(&view_matrix.transform_vector(&world_pos3)));
         
-        // Calcular colores usando fragment shader
-        let color1 = planet.shader.fragment_shader(pos1, norm1, v1.uv, uniforms);
-        let color2 = planet.shader.fragment_shader(pos2, norm2, v2.uv, uniforms);
-        let color3 = planet.shader.fragment_shader(pos3, norm3, v3.uv, uniforms);
+        // PASO 4: Fragment Shader - Calcular color por vértice
+        let color1 = planet.shader.fragment_shader(world_pos1, world_norm1, v1.uv, &uniforms);
+        let color2 = planet.shader.fragment_shader(world_pos2, world_norm2, v2.uv, &uniforms);
+        let color3 = planet.shader.fragment_shader(world_pos3, world_norm3, v3.uv, &uniforms);
         
-        // Dibujar triángulo (simplificado - usar color promedio)
-        let avg_color = ShaderColor::new(
-            (color1.r + color2.r + color3.r) / 3.0,
-            (color1.g + color2.g + color3.g) / 3.0,
-            (color1.b + color2.b + color3.b) / 3.0,
-            (color1.a + color2.a + color3.a) / 3.0,
-        );
+        // Crear vértices transformados para rasterización
+        let tv1 = TransformedVertex {
+            screen_position: screen1,
+            world_position: world_pos1,
+            normal: world_norm1,
+            color: color1,
+            uv: v1.uv,
+        };
         
-        // Verificar que los puntos estén en pantalla
-        if screen1.x >= 0.0 && screen1.x < width as f32 && screen1.y >= 0.0 && screen1.y < height as f32 &&
-           screen2.x >= 0.0 && screen2.x < width as f32 && screen2.y >= 0.0 && screen2.y < height as f32 &&
-           screen3.x >= 0.0 && screen3.x < width as f32 && screen3.y >= 0.0 && screen3.y < height as f32 {
-            
-            rl.draw_triangle(
-                Vector2::new(screen1.x, screen1.y),
-                Vector2::new(screen2.x, screen2.y),
-                Vector2::new(screen3.x, screen3.y),
-                avg_color.to_raylib_color(),
-            );
+        let tv2 = TransformedVertex {
+            screen_position: screen2,
+            world_position: world_pos2,
+            normal: world_norm2,
+            color: color2,
+            uv: v2.uv,
+        };
+        
+        let tv3 = TransformedVertex {
+            screen_position: screen3,
+            world_position: world_pos3,
+            normal: world_norm3,
+            color: color3,
+            uv: v3.uv,
+        };
+        
+        // PASO 5: Rasterization - Generar fragmentos usando coordenadas baricéntricas
+        let fragments = triangle(&tv1, &tv2, &tv3);
+        
+        // PASO 6: Framebuffer - Escribir fragmentos con depth testing
+        for fragment in fragments {
+            if fragment.position.x >= 0.0 && fragment.position.x < width as f32 &&
+               fragment.position.y >= 0.0 && fragment.position.y < height as f32 {
+                framebuffer.set_pixel_with_depth(
+                    fragment.position.x as u32,
+                    fragment.position.y as u32,
+                    fragment.color.to_raylib_color(),
+                    fragment.depth,
+                );
+            }
         }
     }
     
     // Renderizar anillos si el planeta los tiene
     if planet.has_rings {
-        render_rings(rl, &view_matrix, &proj_matrix, &viewport_matrix, uniforms, width, height);
+        render_rings(framebuffer, &view_matrix, &proj_matrix, &viewport_matrix, &uniforms, width, height);
     }
     
     // Renderizar luna si el planeta la tiene
     if planet.has_moon {
-        render_moon(rl, &view_matrix, &proj_matrix, &viewport_matrix, uniforms, width, height);
+        render_moon(framebuffer, &view_matrix, &proj_matrix, &viewport_matrix, &uniforms, width, height);
     }
 }
 
 fn render_rings(
-    rl: &mut RaylibDrawHandle,
+    framebuffer: &mut Framebuffer,
     view_matrix: &matrix::Matrix,
     proj_matrix: &matrix::Matrix,
     viewport_matrix: &matrix::Matrix,
@@ -167,7 +190,7 @@ fn render_rings(
     width: i32,
     height: i32,
 ) {
-    // Generar anillos procedurales
+    // Generar anillos procedurales usando rasterización manual
     let ring_segments = 64;
     let rings = 8;
     
@@ -192,28 +215,24 @@ fn render_rings(
             };
             
             // Aplicar shader de anillos
-            let (pos1, color1) = RingShader::vertex_shader(&vertex1, uniforms);
-            let (pos2, color2) = RingShader::vertex_shader(&vertex2, uniforms);
+            let (pos1, base_color1) = RingShader::vertex_shader(&vertex1, uniforms);
+            let (pos2, _) = RingShader::vertex_shader(&vertex2, uniforms);
             
             // Transformar a pantalla
             let screen1 = viewport_matrix.transform_vector(&proj_matrix.transform_vector(&view_matrix.transform_vector(&pos1)));
             let screen2 = viewport_matrix.transform_vector(&proj_matrix.transform_vector(&view_matrix.transform_vector(&pos2)));
             
-            // Dibujar línea de anillo
-            if screen1.x >= 0.0 && screen1.x < width as f32 && screen1.y >= 0.0 && screen1.y < height as f32 &&
-               screen2.x >= 0.0 && screen2.x < width as f32 && screen2.y >= 0.0 && screen2.y < height as f32 {
-                rl.draw_line_v(
-                    Vector2::new(screen1.x, screen1.y),
-                    Vector2::new(screen2.x, screen2.y),
-                    color1.to_raylib_color(),
-                );
-            }
+            // Calcular color usando fragment shader
+            let color1 = RingShader::fragment_shader(pos1, vertex1.normal, base_color1, uniforms);
+            
+            // Dibujar línea de anillo en el framebuffer
+            draw_line_framebuffer(framebuffer, screen1, screen2, color1.to_raylib_color(), width, height);
         }
     }
 }
 
 fn render_moon(
-    rl: &mut RaylibDrawHandle,
+    framebuffer: &mut Framebuffer,
     view_matrix: &matrix::Matrix,
     proj_matrix: &matrix::Matrix,
     viewport_matrix: &matrix::Matrix,
@@ -242,23 +261,72 @@ fn render_moon(
             
             let vertex = Vertex {
                 position: Vector3::new(x, y, z),
-                normal: Vector3::new(x, y, z).normalize(),
+                normal: Vector3::new(x - moon_x, y, z - moon_z).normalize(),
                 uv: (j as f32 / segments as f32, i as f32 / segments as f32),
             };
             
             // Aplicar shader de luna
-            let (pos, color) = MoonShader::vertex_shader(&vertex, uniforms);
+            let (pos, base_color) = MoonShader::vertex_shader(&vertex, uniforms);
             
             // Transformar a pantalla
             let screen = viewport_matrix.transform_vector(&proj_matrix.transform_vector(&view_matrix.transform_vector(&pos)));
             
-            // Dibujar punto de luna
+            // Calcular color usando fragment shader
+            let color = MoonShader::fragment_shader(pos, vertex.normal, base_color, uniforms);
+            
+            // Dibujar punto de luna en el framebuffer
             if screen.x >= 0.0 && screen.x < width as f32 && screen.y >= 0.0 && screen.y < height as f32 {
-                rl.draw_pixel_v(
-                    Vector2::new(screen.x, screen.y),
+                framebuffer.point_with_depth(
+                    screen.x as i32,
+                    screen.y as i32,
                     color.to_raylib_color(),
+                    screen.z,
                 );
             }
+        }
+    }
+}
+
+// Función auxiliar para dibujar líneas en el framebuffer (algoritmo de Bresenham)
+fn draw_line_framebuffer(
+    framebuffer: &mut Framebuffer,
+    start: Vector3,
+    end: Vector3,
+    color: Color,
+    width: i32,
+    height: i32,
+) {
+    let x0 = start.x as i32;
+    let y0 = start.y as i32;
+    let x1 = end.x as i32;
+    let y1 = end.y as i32;
+    
+    let dx = (x1 - x0).abs();
+    let dy = -(y1 - y0).abs();
+    let sx = if x0 < x1 { 1 } else { -1 };
+    let sy = if y0 < y1 { 1 } else { -1 };
+    let mut err = dx + dy;
+    
+    let mut x = x0;
+    let mut y = y0;
+    
+    loop {
+        if x >= 0 && x < width && y >= 0 && y < height {
+            framebuffer.set_pixel_color(x as u32, y as u32, color);
+        }
+        
+        if x == x1 && y == y1 {
+            break;
+        }
+        
+        let e2 = 2 * err;
+        if e2 >= dy {
+            err += dy;
+            x += sx;
+        }
+        if e2 <= dx {
+            err += dx;
+            y += sy;
         }
     }
 }
@@ -266,9 +334,15 @@ fn render_moon(
 fn main() {
     let (mut rl, thread) = raylib::init()
         .size(1024, 768)
-        .title("Laboratorio de Planetas - Shaders")
+        .title("Laboratorio de Planetas - Software Renderer")
         .build();
 
+    let width = 1024;
+    let height = 768;
+    
+    // Crear framebuffer personalizado (implementación académica)
+    let mut framebuffer = Framebuffer::new(width as u32, height as u32);
+    
     let mut camera = Camera::new();
     let mut planets = vec![
         Planet::new(PlanetType::Rocky),
@@ -279,14 +353,6 @@ fn main() {
     
     let mut current_planet = 0;
     let mut time = 0.0f32;
-    
-    // Configurar cámara 3D de raylib para comparación
-    let mut raylib_camera = Camera3D::perspective(
-        raylib::prelude::Vector3::new(0.0, 0.0, 5.0),
-        raylib::prelude::Vector3::new(0.0, 0.0, 0.0),
-        raylib::prelude::Vector3::new(0.0, 1.0, 0.0),
-        45.0,
-    );
 
     rl.set_target_fps(60);
 
@@ -296,7 +362,6 @@ fn main() {
         
         // Actualizar cámara
         camera.update(&rl);
-        raylib_camera = camera.get_raylib_camera();
         
         // Cambiar planeta con teclas
         if rl.is_key_pressed(KeyboardKey::KEY_ONE) {
@@ -312,36 +377,38 @@ fn main() {
         // Actualizar planeta actual
         planets[current_planet].update(dt);
         
-        // Configurar uniforms para shaders
-        let uniforms = ShaderUniforms {
-            time,
-            light_direction: Vector3::new(1.0, 1.0, 1.0).normalize(),
-            camera_position: camera.eye,
-        };
+        // RENDERIZADO: Limpiar framebuffer antes de cada frame
+        framebuffer.clear(Color::BLACK);
         
-        let mut d = rl.begin_drawing(&thread);
-        d.clear_background(raylib::prelude::Color::BLACK);
-        
-        // Renderizar usando nuestro software renderer
+        // Renderizar usando nuestro software renderer con framebuffer personalizado
         render_planet_software(
-            &planets[current_planet],
+            &mut framebuffer,
+            &mut planets[current_planet],
             &camera,
-            &uniforms,
-            &mut d,
-            1024,
-            768,
+            time,
+            width as i32,
+            height as i32,
         );
         
+        // Actualizar textura de Raylib con los datos del framebuffer
+        framebuffer.swap_buffers(&mut rl, &thread);
+        
+        let mut d = rl.begin_drawing(&thread);
+        d.clear_background(Color::BLACK);
+        
+        // Dibujar el framebuffer en pantalla
+        framebuffer.draw_to_screen(&mut d);
+        
         // UI
-        d.draw_text("Laboratorio de Planetas con Shaders", 10, 10, 20, raylib::prelude::Color::WHITE);
-        d.draw_text("Controles:", 10, 40, 16, raylib::prelude::Color::WHITE);
-        d.draw_text("1 - Planeta Rocoso (con Luna)", 10, 60, 14, raylib::prelude::Color::WHITE);
-        d.draw_text("2 - Gigante Gaseoso (con Anillos)", 10, 80, 14, raylib::prelude::Color::WHITE);
-        d.draw_text("3 - Planeta de Cristal (con Anillos)", 10, 100, 14, raylib::prelude::Color::WHITE);
-        d.draw_text("4 - Planeta de Lava", 10, 120, 14, raylib::prelude::Color::WHITE);
-        d.draw_text("WASD: Rotar cámara", 10, 140, 14, raylib::prelude::Color::WHITE);
-        d.draw_text("Flechas: Zoom y paneo", 10, 160, 14, raylib::prelude::Color::WHITE);
-        d.draw_text("Q/E: Paneo horizontal, R/F: Paneo vertical", 10, 180, 14, raylib::prelude::Color::WHITE);
+        d.draw_text("Laboratorio de Planetas - Software Renderer", 10, 10, 20, Color::WHITE);
+        d.draw_text("Controles:", 10, 40, 16, Color::WHITE);
+        d.draw_text("1 - Planeta Rocoso (con Luna)", 10, 60, 14, Color::WHITE);
+        d.draw_text("2 - Gigante Gaseoso (con Anillos)", 10, 80, 14, Color::WHITE);
+        d.draw_text("3 - Planeta de Cristal (con Anillos)", 10, 100, 14, Color::WHITE);
+        d.draw_text("4 - Planeta de Lava", 10, 120, 14, Color::WHITE);
+        d.draw_text("WASD: Rotar cámara", 10, 140, 14, Color::WHITE);
+        d.draw_text("Flechas: Zoom y paneo", 10, 160, 14, Color::WHITE);
+        d.draw_text("Q/E: Paneo horizontal, R/F: Paneo vertical", 10, 180, 14, Color::WHITE);
         
         let planet_names = ["Planeta Rocoso (Luna)", "Gigante Gaseoso (Anillos)", "Planeta de Cristal (Anillos)", "Planeta de Lava"];
         let planet_features = [
